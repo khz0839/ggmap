@@ -1,0 +1,166 @@
+---
+output:
+  md_document:
+    variant: markdown_github
+---
+
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
+```{r, echo = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE, cache = TRUE,
+  comment = "# ",
+  fig.path = "tools/README-"
+)
+```
+
+# ggmap
+
+**ggmap** makes it easy to retrieve raster map tiles from popular online mapping services like [Google Maps](https://developers.google.com/maps/documentation/static-maps/?hl=en), [OpenStreetMap](https://www.openstreetmap.org), [Stamen Maps](http://maps.stamen.com), and plot them using the **ggplot2** framework:
+
+```{r maptypes, message = FALSE}
+library(ggmap)
+
+us <- c(left = -125, bottom = 25.75, right = -67, top = 49)
+map <- get_stamenmap(us, zoom = 5, maptype = "toner-lite")
+ggmap(map)
+ggmap(map, extent = "device")
+```
+
+Use `qmplot()` in the same way you'd use `qplot()`, but with a map automatically added in the background:
+
+```{r qmplot, message=FALSE}
+library(dplyr)
+
+# only violent crimes
+violent_crimes <- filter(crime, 
+  offense != "auto theft", offense != "theft", offense != "burglary"
+)
+
+# rank violent crimes
+violent_crimes$offense <- factor(
+  violent_crimes$offense,
+  levels = c("robbery", "aggravated assault", "rape", "murder")
+)
+
+# restrict to downtown
+violent_crimes <- filter(violent_crimes,
+  -95.39681 <= lon & lon <= -95.34188,
+   29.73631 <= lat & lat <=  29.78400
+)
+
+qmplot(lon, lat, data = violent_crimes, maptype = "toner-lite", color = I("red"))
+qmplot(lon, lat, data = violent_crimes, maptype = "toner-lite", geom = "density2d", color = I("red"))
+```
+
+Since **ggmap**'s built on top of **ggplot2**, all your usual **ggplot2** stuff (geoms, polishing, etc.) will work, and there are some unique graphing perks **ggmap** brings to the table, too.
+
+```{r styling, message=FALSE}
+robberies <- violent_crimes %>% filter(offense == "robbery")
+
+qmplot(lon, lat, data = violent_crimes, geom = "blank", zoom = 15, maptype = "toner-background", darken = .7, legend = "topleft") +
+  stat_density_2d(aes(fill = ..level..), geom = "polygon", alpha = .3, color = NA) +
+  scale_fill_gradient2("Robbery\nPropensity", low = "white", mid = "yellow", high = "red", midpoint = 650)
+```
+
+Faceting works, too:
+
+```{r faceting, message=FALSE}
+qmplot(lon, lat, data = violent_crimes, maptype = "toner-background", color = offense) + 
+  facet_wrap(~ offense)
+```
+
+For convenience, here's a map of Europe:
+
+```{r europe, message=FALSE}
+europe <- c(left = -12, bottom = 35, right = 30, top = 63)
+get_stamenmap(europe, zoom = 5) %>% ggmap()
+get_stamenmap(europe, zoom = 5, maptype = "toner-lite") %>% ggmap()
+```
+
+
+
+
+
+## Google Maps and Credentials
+
+[Google Maps](http://developers.google.com/maps/terms) can be used just as easily.  However, since Google Maps use a center/zoom specification, their input is a bit different:
+```{r google_maps}
+get_googlemap("waco texas", zoom = 12) %>% ggmap()
+```
+
+Moreover, you can get various different styles of Google Maps with __ggmap__ (just like Stamen Maps):
+```{r google_styles}
+get_googlemap("waco texas", zoom = 12, maptype = "satellite") %>% ggmap()
+get_googlemap("waco texas", zoom = 12, maptype = "roadmap") %>% ggmap()
+get_googlemap("waco texas", zoom = 12, maptype = "hybrid") %>% ggmap()
+```
+
+Google's geocoding and reverse geocoding API's are available through `geocode()` and `revgeocode()`, respectively:
+```{r geocode}
+geocode("1301 S University Parks Dr, Waco, TX 76798")
+revgeocode(c(lon = -97.1161, lat = 31.55098))
+```
+
+There is also a `mutate_geocode()` that works similarly to [__dplyr__](https://github.com/hadley/dplyr)'s `mutate()` function:
+```{r mutate_geocode, messages = FALSE}
+library(tidyverse)
+tb <- data_frame(address = c("1600 Pennsylvania Avenue, Washington DC", "", "waco texas"))
+tb %>% mutate_geocode(address)
+```
+
+
+Treks use Google's routing API to give you routes (`route()` and `trek()` give slightly different results; the latter hugs roads):
+```{r route_trek}
+trek_df <- trek("houson, texas", "waco, texas", structure = "route")
+qmap("college station, texas", zoom = 8) +
+  geom_path(
+    aes(x = lon, y = lat),  colour = "blue",
+    size = 1.5, alpha = .5,
+    data = trek_df, lineend = "round"
+  )
+```
+
+(They also provide information on how long it takes to get from point A to point B.)
+
+
+Map distances, in both length and anticipated time, can be computed with `mapdist()`).  Moreover the function is vectorized:
+```{r mapdist}
+mapdist(c("houston, texas", "dallas"), "waco, texas")
+```
+
+
+
+### Google credentialing
+
+If you have a Google API key, you can exceed the standard limits Google places on queries.  By default, when __ggmap__ is loaded it will set the following credentials and limits:
+```{r basic_credentials}
+ggmap_credentials()
+```
+Look at the documentation of `?register_google()` to learn more.  If you do have an API key, you set it with:
+```{r google_api}
+register_google(key = "[your key here]", account_type = "premium", day_limit = 100000)
+ggmap_credentials()
+```
+These will then be used and checked when creating the query URL:
+```{r key}
+register_google(key = "AbCdEfGhIjKlMnOpQrStUvWxYz")
+get_googlemap("waco texas", urlonly = TRUE)
+```
+
+For anything that hasn't been implemente (URL-wise), you can inject code into the query usin g `inject`:
+```{r otherStuff}
+get_googlemap("waco texas", urlonly = TRUE, inject = "otherItem = Stuff")
+```
+
+
+
+
+
+
+## Installation
+
+* From CRAN: `install.packages("ggmap")`
+
+* From Github: `devtools::install_github("dkahle/ggmap")`
+

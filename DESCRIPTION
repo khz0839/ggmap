@@ -1,0 +1,36 @@
+Package: ggmap
+Version: 2.7
+Title: Spatial Visualization with ggplot2
+Description: A collection of functions to visualize spatial data and models
+    on top of static maps from various online sources (e.g Google Maps and Stamen
+    Maps). It includes tools common to those tasks, including functions for
+    geolocation and routing.
+URL: https://github.com/dkahle/ggmap
+BugReports: https://github.com/dkahle/ggmap/issues
+Authors@R: c(person("David", "Kahle", email = "david.kahle@gmail.com", role = c("aut", "cre")),
+  person("Hadley", "Wickham", email = "h.wickham@gmail.com", role = "aut"))
+Depends:
+    R (>= 3.1.0),
+    ggplot2 (>= 2.2.0)
+Imports:
+    proto,
+    RgoogleMaps,
+    png,
+    plyr,
+    reshape2,
+    rjson,
+    mapproj,
+    jpeg,
+    geosphere,
+    digest,
+    scales,
+    dplyr,
+    bitops
+Suggests:
+    MASS,
+    stringr,
+    hexbin,
+    tibble
+License: GPL-2
+LazyData: true
+RoxygenNote: 6.0.1
